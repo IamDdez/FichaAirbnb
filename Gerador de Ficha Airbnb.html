@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerador de Autorização – Airbnb</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f2f4f8;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.1);
+      overflow: hidden;
+    }
+
+    header {
+      background: #4f46e5;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+    }
+
+    header h1 { font-size: 22px; }
+    header p { font-size: 14px; opacity: .9; }
+
+    .content {
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    h2 {
+      font-size: 16px;
+      border-bottom: 2px solid #4f46e5;
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .group { margin-bottom: 12px; }
+
+    label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .row .group { flex: 1; }
+
+    .checkbox {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: #4f46e5;
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: #4338ca; }
+
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111;
+    }
+
+    .actions {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    #companions > div {
+      background: #f3f4f6;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+
+    @media(max-width: 800px) {
+      .content { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <header>
+    <h1>Sistema Interno Airbnb</h1>
+    <p>Autorização de Entrada – Condomínio</p>
+  </header>
+
+  <div class="content">
+
+    <div>
+      <h2>Proprietário</h2>
+      <div class="group"><label>Nome</label><input id="ownerName" value="Edgar José Perez Henriquez"></div>
+      <div class="group"><label>CPF</label><input id="ownerCPF" value="013.231.329-45"></div>
+      <div class="group"><label>Apartamento</label><input id="apartment" value="205"></div>
+      <div class="group"><label>Bloco</label><input id="block" value="02"></div>
+      <div class="group"><label>Telefone</label><input id="phone" value="(43) 99811-4948"></div>
+    </div>
+
+    <div>
+      <h2>Hóspede</h2>
+      <div class="group"><label>Nome</label><input id="nomeHospede"></div>
+      <div class="group"><label>CPF</label><input id="cpfHospede"></div>
+
+      <div class="row">
+        <div class="group"><label>Check-in</label><input type="date" id="checkin"></div>
+        <div class="group"><label>Hora</label><input type="time" id="horaCheckin" value="14:00"></div>
+      </div>
+
+      <div class="row">
+        <div class="group"><label>Check-out</label><input type="date" id="checkout"></div>
+        <div class="group"><label>Hora</label><input type="time" id="horaCheckout" value="10:00"></div>
+      </div>
+
+      <h2>Acompanhantes</h2>
+      <div id="companions"></div>
+      <button class="btn-secondary" onclick="addCompanion()">+ Adicionar acompanhante</button>
+
+      <h2 style="margin-top:10px">Veículo</h2>
+      <div class="checkbox">
+        <input type="checkbox" id="hasVehicle">
+        <label>Possui veículo</label>
+      </div>
+
+      <div id="vehicleFields" style="display:none">
+        <div class="group"><label>Marca / Modelo</label><input id="vehicleBrand"></div>
+        <div class="group"><label>Placa</label><input id="vehiclePlate"></div>
+        <div class="group"><label>Cor</label><input id="vehicleColor"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-primary" onclick="gerarPDF()">Gerar Autorização (PDF)</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* =======================
+   HELPERS
+======================= */
+const $ = id => document.getElementById(id);
+
+const formatarData = data => {
+  const [a, m, d] = data.split("-");
+  return `${d}/${m}/${a}`;
+};
+
+/* =======================
+   ACOMPANHANTES
+======================= */
+function addCompanion() {
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = `
+    <label>Nome</label><input class="c-name">
+    <label>CPF</label><input class="c-cpf">
+  `;
+  $('companions').appendChild(wrapper);
+}
+
+/* =======================
+   VEÍCULO
+======================= */
+$('hasVehicle').addEventListener('change', () => {
+  $('vehicleFields').style.display = $('hasVehicle').checked ? 'block' : 'none';
+});
+
+/* =======================
+   VALIDAÇÃO
+======================= */
+function validarCamposObrigatorios() {
+  const campos = [
+    $('nomeHospede'),
+    $('cpfHospede'),
+    $('checkin'),
+    $('checkout'),
+    $('horaCheckin'),
+    $('horaCheckout')
+  ];
+  return campos.every(campo => campo.value.trim());
+}
+
+/* =======================
+   PDF
+======================= */
+function gerarPDF() {
+  if (!validarCamposObrigatorios()) {
+    alert("Preencha todos os campos obrigatórios.");
+    return;
+  }
+
+  let acompanhantes = "Nenhum";
+  const nomes = document.querySelectorAll('.c-name');
+  const cpfs = document.querySelectorAll('.c-cpf');
+
+  if (nomes.length) {
+    acompanhantes = "";
+    nomes.forEach((nome, index) => {
+      if (nome.value && cpfs[index].value) {
+        acompanhantes += `${nome.value} — ${cpfs[index].value}<br>`;
+      }
+    });
+  }
+
+  const html = `
+<h3 style="text-align:center;">
+AUTORIZAÇÃO DE ENTRADA DE HÓSPEDE POR CURTO PERÍODO<br>
+DETERMINADO (CESSÃO)
+</h3>
+
+<p>
+Eu, <b><u>${$('ownerName').value}</u></b>, portador do CPF <b><u>${$('ownerCPF').value}</u></b>, proprietário do apartamento <b><u>${$('apartment').value}</u></b>, bloco <b><u>${$('block').value}</u></b>, do condomínio <b>Residencial Spazio La Ville</b>, declaro que fica autorizado o uso de toda a fração ideal do imóvel supracitado, incluindo seus benefícios como garagem e áreas comuns para:
+.
+</p>
+
+<p>Ass: _________________________________________________</p>
+
+<p>
+<b>Nome do hóspede:</b> <u>${$('nomeHospede').value}</u>, <b>CPF:</b> <u>${$('cpfHospede').value}</u>
+</p>
+
+<p>
+Pelo período compreendido entre as <b><u>${$('horaCheckin').value}</u>h</b> de <b><u>${formatarData($('checkin').value)}</u></b> e <b><u>${$('horaCheckout').value}</u> h</b> de <b><u>${formatarData($('checkout').value)}</u></b>.
+</p>
+
+<p>
+Ficando liberado sua entrada e saída, assim como de seu veículo e seus acompanhantes abaixo listados
+</p>
+
+<b><h4 style="text-align:center;"><u>Veículo (Garagem ${$('apartment').value} / BL ${$('block').value})</u></h4></b>
+${$('hasVehicle').checked 
+  ? `<b>Marca/Modelo:</b> ${$('vehicleBrand').value} &nbsp;&nbsp;&nbsp;&nbsp; <b>Placa:</b> ${$('vehiclePlate').value} &nbsp;&nbsp;&nbsp;&nbsp; <b>Cor:</b> ${$('vehicleColor').value}`
+  : 'Não possui'
+}
+<br><br>
+
+<h4 style="text-align:center;"><b><u>Acompanhantes</u></b></h4><br>
+${acompanhantes}
+<br><br>
+
+Ass: _____________________________________________________<br><br>
+
+<h4 style="text-align:center;">
+<b>Nome do proprietário:</b> <u>${$('ownerName').value}</u><br>
+<b>Telefone para contato de emergência:</b> <u>${$('phone').value}</u><br>
+OBS: O hóspede fica sujeito a cumprir todas as normas vigentes do condomínio, em caso de<br>
+transgressão das mesmas o proprietário será o responsável.<br><br>
+A entrada fica autorizada mediante a resposta da senha: _____________________________<br><br>
+</h4>
+`;
+
+  const win = window.open("", "", "width=800,height=800");
+  win.document.write(`<html><body style="font-family:Times New Roman;padding:30px">${html}</body></html>`);
+  win.document.close();
+  win.print();
+}
+</script>
+
+</body>
+</html>
